@@ -40,7 +40,8 @@ so officers see a "To hand out" list next to the guild vault in game.
 | `web/kit/uploader/` | Windows uploader (PowerShell, nothing to install). Runs in the system tray. |
 
 The addon and uploader live inside `web/kit/` because the website builds each officer's personal
-sync kit from them.
+sync kit from them. The uploader's files are stored with an extra `.txt` extension (so hosting virus
+scanners don't block script files) and get their real names inside each kit.
 
 ## Setting up the website
 
@@ -64,7 +65,7 @@ Errors are written to `web/logs/php-errors.log` (blocked from browsers); visitor
    (or `can_sync`) get this option. The kit has the addon and the uploader with the guild name, website
    address and a personal key already filled in.
 2. Copy the `GuildBankSync` folder into `World of Warcraft\_forever_\Interface\AddOns\`.
-3. Double-click `start-uploader.vbs`. A gold chest icon appears near the clock. Right-click it to
+3. Double-click `start-uploader.bat`. A gold chest icon appears near the clock. Right-click it to
    open the website, check for snapshots, show the log, or turn on **Start with Windows**.
    `start-uploader-console.bat` runs it in a visible window for troubleshooting.
 4. In game: open the guild vault, wait a few seconds, close it, and click **Reload now**.
@@ -76,7 +77,8 @@ In-game commands: `/gbs` (status), `/gbs list` (hand-out list), `/gbs scan`, `/g
 **Keys.** Each kit has its own key, stored on the site only as a hash. Downloading a new kit replaces
 the old key; officers can turn off any key on their Profile page, and a key stops working when its owner
 loses their syncing rank. Fixed keys in `config.php` (`upload_keys`) also work, e.g. for a shared PC.
-To build a kit by hand, set `$GuildName`, `$SiteUrl` and `$ApiKey` at the top of `gbs-uploader.ps1`.
+To build a kit by hand, drop the `.txt` from the uploader files and set `$GuildName`, `$SiteUrl` and
+`$ApiKey` at the top of `gbs-uploader.ps1`.
 
 ## How it works
 

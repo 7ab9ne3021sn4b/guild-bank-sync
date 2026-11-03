@@ -15,8 +15,8 @@ Before extracting: right-click the zip > Properties > tick "Unblock" (if shown) 
 2. THE UPLOADER
    Move the "2 - Uploader" folder somewhere it can stay (e.g. Documents). Don't run it from inside the zip.
    If you had an older uploader: right-click its chest icon > Quit, and delete the old folder.
-   Double-click "start-uploader.vbs". Nothing opens: it runs in the background and a small
-   gold chest icon appears near the clock (click the ^ arrow if you don't see it).
+   Double-click "start-uploader.bat". A black window flashes briefly, then it runs in the background
+   and a small gold chest icon appears near the clock (click the ^ arrow if you don't see it).
    The first time, it looks for your WoW folder; if it can't find it, it asks you to pick it.
 
    Right-click the chest icon for:

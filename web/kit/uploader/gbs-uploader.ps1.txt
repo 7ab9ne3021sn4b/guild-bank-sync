@@ -1,7 +1,7 @@
 # Guild Bank Sync uploader
 # Watches the GuildBankSync addon's saved file and uploads new guild bank snapshots.
 # Runs on the PowerShell that comes with Windows; nothing to install.
-# Normally started hidden by start-uploader.vbs and lives in the system tray.
+# Normally started hidden by start-uploader.bat and lives in the system tray.
 # start-uploader-console.bat runs it in a visible window instead (handy for troubleshooting).
 # Keep this file private: it contains the upload key.
 param([switch]$Console)
@@ -365,12 +365,13 @@ function Get-StartupShortcut { Join-Path ([Environment]::GetFolderPath('Startup'
 function Set-Autostart([bool]$enabled) {
     $lnk = Get-StartupShortcut
     if ($enabled) {
-        $vbs = Join-Path $Here 'start-uploader.vbs'
+        $script = Join-Path $Here 'gbs-uploader.ps1'
         $shell = New-Object -ComObject WScript.Shell
         $sc = $shell.CreateShortcut($lnk)
-        $sc.TargetPath = Join-Path $env:WINDIR 'System32\wscript.exe'
-        $sc.Arguments = '"' + $vbs + '"'
+        $sc.TargetPath = Join-Path $env:WINDIR 'System32\WindowsPowerShell\v1.0\powershell.exe'
+        $sc.Arguments = '-NoProfile -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + $script + '"'
         $sc.WorkingDirectory = $Here
+        $sc.WindowStyle = 7   # start minimized, so nothing flashes on screen
         $sc.Description = $AppName
         $sc.Save()
         Log 'Start with Windows: on'
@@ -401,6 +402,12 @@ function New-ChestIcon {
 }
 
 function Start-Tray {
+    # If "Start with Windows" is on, refresh the shortcut so it points at this copy of the uploader
+    # (handles moved folders and shortcuts made by older versions).
+    if (Test-Path -LiteralPath (Get-StartupShortcut)) {
+        try { Set-Autostart $true } catch {}
+    }
+
     $menu = New-Object System.Windows.Forms.ContextMenuStrip
 
     $title = $menu.Items.Add($AppName)

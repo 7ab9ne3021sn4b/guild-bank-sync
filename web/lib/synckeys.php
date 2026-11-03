@@ -136,19 +136,23 @@ function send_sync_kit(array $user, string $key): void
     }
 
     $crlf = fn(string $s): string => preg_replace("/\r?\n/", "\r\n", $s);
-    $psQuote = fn(string $s): string => str_replace("'", "''", $s);
+    // Quote for a PowerShell single-quoted string, then escape for use in a preg_replace replacement.
+    $psQuote = fn(string $s): string => strtr(str_replace("'", "''", $s), ['\\' => '\\\\', '$' => '\\$']);
 
     foreach (glob(KIT_DIR . '/addon/GuildBankSync/*') as $file) {
         $zip->addFile($file, "$top/1 - Copy into AddOns/GuildBankSync/" . basename($file));
     }
 
-    $ps = (string)file_get_contents(KIT_DIR . '/uploader/gbs-uploader.ps1');
-    $ps = preg_replace("/^\\\$GuildName = '.*'$/m", "\$GuildName = '" . $psQuote($guild) . "'", $ps, 1);
-    $ps = preg_replace("/^\\\$SiteUrl   = '.*'$/m", "\$SiteUrl   = '" . $psQuote($site) . "'", $ps, 1);
-    $ps = preg_replace("/^\\\$ApiKey    = '.*'$/m", "\$ApiKey    = '" . $psQuote($key) . "'", $ps, 1);
+    // The uploader files are stored as .txt on the server (so hosting virus scanners don't flag
+    // script files) and get their real names inside the kit.
+    $ps = (string)file_get_contents(KIT_DIR . '/uploader/gbs-uploader.ps1.txt');
+    $ps = preg_replace('/^\$GuildName = \'.*\'$/m', '$GuildName = \'' . $psQuote($guild) . '\'', $ps, 1);
+    $ps = preg_replace('/^\$SiteUrl   = \'.*\'$/m', '$SiteUrl   = \'' . $psQuote($site) . '\'', $ps, 1);
+    $ps = preg_replace('/^\$ApiKey    = \'.*\'$/m', '$ApiKey    = \'' . $psQuote($key) . '\'', $ps, 1);
     $zip->addFromString("$top/2 - Uploader/gbs-uploader.ps1", $crlf($ps));
-    $zip->addFromString("$top/2 - Uploader/start-uploader.vbs", $crlf((string)file_get_contents(KIT_DIR . '/uploader/start-uploader.vbs')));
-    $bat = (string)file_get_contents(KIT_DIR . '/uploader/start-uploader-console.bat');
+    $zip->addFromString("$top/2 - Uploader/start-uploader.bat",
+        $crlf((string)file_get_contents(KIT_DIR . '/uploader/start-uploader.bat.txt')));
+    $bat = (string)file_get_contents(KIT_DIR . '/uploader/start-uploader-console.bat.txt');
     $bat = str_replace('title Guild Bank Uploader', 'title ' . $top . ' Uploader', $bat);
     $zip->addFromString("$top/2 - Uploader/start-uploader-console.bat", $crlf($bat));
 

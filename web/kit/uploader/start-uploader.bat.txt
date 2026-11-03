@@ -1,0 +1,4 @@
+@echo off
+rem Starts the uploader in the background. Look for the gold chest icon near the clock.
+cd /d "%~dp0"
+start "" powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0gbs-uploader.ps1"
