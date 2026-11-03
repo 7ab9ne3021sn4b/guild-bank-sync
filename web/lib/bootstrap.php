@@ -219,7 +219,29 @@ function user_rank(?array $user): ?array
         return null;
     }
     $roles = json_decode((string)$user['roles'], true) ?: [];
-    return rank_for_roles(array_map('strval', $roles));
+    $rank = rank_for_roles(array_map('strval', $roles));
+    if (is_site_admin($user)) {
+        // Site admins (the people who run the tool) get full access on top of whatever rank they hold.
+        return [
+            'name' => $rank ? $rank['name'] . ' · Admin' : 'Admin',
+            'role_id' => $rank['role_id'] ?? '',
+            'tabs' => 'all',
+            'money_log' => true,
+            'can_request' => true,
+            'can_approve' => true,
+            'can_sync' => true,
+            'is_admin' => true,
+        ];
+    }
+    return $rank;
+}
+
+function is_site_admin(?array $user): bool
+{
+    if (!$user || empty($user['discord_id'])) {
+        return false;
+    }
+    return in_array((string)$user['discord_id'], array_map('strval', (array)cfg('admins', [])), true);
 }
 
 function rank_tabs(?array $rank): array

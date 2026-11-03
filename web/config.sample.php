@@ -27,6 +27,12 @@ return [
         'role_refresh_seconds' => 900,
     ],
 
+    // Site admins: Discord user IDs (not role IDs) of the people who run this site. They get full
+    // access whatever their guild rank. Right-click your name in Discord > Copy User ID.
+    'admins' => [
+        // '123456789012345678',
+    ],
+
     // Officer notifications: Discord channel → Edit → Integrations → Webhooks → New → Copy URL.
     // Leave empty to turn notifications off.
     'webhook_url' => '',
