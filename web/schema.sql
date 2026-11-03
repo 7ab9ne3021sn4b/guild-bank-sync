@@ -88,3 +88,16 @@ CREATE TABLE IF NOT EXISTS settings (
   name VARCHAR(50) PRIMARY KEY,
   value TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Officers' personal sync keys (also created automatically by the site if missing).
+CREATE TABLE IF NOT EXISTS sync_keys (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  key_hash CHAR(64) NOT NULL,
+  key_hint VARCHAR(8) NOT NULL,
+  created_at INT NOT NULL,
+  last_used_at INT NULL,
+  revoked_at INT NULL,
+  KEY idx_sync_hash (key_hash),
+  KEY idx_sync_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

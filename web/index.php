@@ -10,6 +10,10 @@ if ($route === 'api/upload') {
     handle_upload_api();
     exit;
 }
+if ($route === 'api/handouts') {
+    handle_handouts_api();
+    exit;
+}
 
 start_session();
 
@@ -83,6 +87,24 @@ function route_profile(array $user, ?array $rank): void
 {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         csrf_check();
+        $action = (string)($_POST['action'] ?? 'name');
+        if ($action === 'kit') {
+            if (!can_sync($rank)) {
+                flash('Your rank cannot sync the bank.', 'warn');
+                redirect(url('profile'));
+            }
+            send_sync_kit($user, create_sync_key($user));
+            exit;
+        }
+        if ($action === 'revoke') {
+            $keyId = (int)($_POST['key_id'] ?? 0);
+            $own = q('SELECT id FROM sync_keys WHERE id = ? AND user_id = ?', [$keyId, $user['id']])->fetch();
+            if ($own || can($rank, 'can_approve')) {
+                revoke_sync_key($keyId);
+                flash('Sync key turned off. That uploader can no longer send data.');
+            }
+            redirect(url('profile'));
+        }
         $name = trim((string)($_POST['character_name'] ?? ''));
         if ($name !== '' && !preg_match('/^[\p{L}]{2,12}$/u', $name)) {
             flash('Character names are 2–12 letters, no spaces or numbers.', 'warn');
@@ -116,7 +138,57 @@ function route_profile(array $user, ?array $rank): void
         . '<dt>You can</dt><dd>' . ($perms ? e(implode(', ', $perms)) : 'view only') . '</dd>'
         . '</dl><p class="fine">Ranks come from your Discord roles and refresh every few minutes.</p>'
         . '<form method="post" action="' . e(url('logout')) . '">' . csrf_field() . '<button class="btn ghost">Log out</button></form></div>';
+    $body .= sync_section($user, $rank);
     layout('Profile', $body, $user, $rank, 'profile');
+}
+
+function sync_section(array $user, ?array $rank): string
+{
+    if (!can_sync($rank)) {
+        return '';
+    }
+    $mine = active_sync_key((int)$user['id']);
+    $h = '<h2 class="section">Sync the bank</h2><div class="card narrow">'
+        . '<p>The sync kit has the in-game addon and the uploader, with your own personal key already filled in. '
+        . 'Open the guild vault in game, then reload, and the bank updates here.</p>';
+    if ($mine) {
+        $h .= '<p class="fine">Your key (ending in <code>' . e($mine['key_hint']) . '</code>) was created ' . when((int)$mine['created_at'])
+            . ($mine['last_used_at'] ? ', last used ' . when((int)$mine['last_used_at']) : ', not used yet') . '.</p>';
+    }
+    $h .= '<form method="post" class="row-actions">' . csrf_field() . '<input type="hidden" name="action" value="kit">'
+        . '<button class="btn">' . ($mine ? 'Download a new sync kit' : 'Download my sync kit') . '</button></form>';
+    if ($mine) {
+        $h .= '<p class="fine">A new download replaces your old key, so the previous kit stops working. Install the new one over it.</p>'
+            . '<form method="post">' . csrf_field() . '<input type="hidden" name="action" value="revoke">'
+            . '<input type="hidden" name="key_id" value="' . (int)$mine['id'] . '">'
+            . '<button class="btn ghost small">Turn off my key</button></form>';
+    }
+    $h .= '<p class="fine">Keep the kit to yourself: anyone with it can upload bank data as you.</p></div>';
+
+    if (can($rank, 'can_approve')) {
+        $rows = q('SELECT k.*, u.username, u.character_name FROM sync_keys k JOIN users u ON u.id = k.user_id
+                   WHERE k.revoked_at IS NULL ORDER BY k.last_used_at DESC, k.created_at DESC')->fetchAll();
+        $h .= '<h2 class="section">Active sync keys</h2><div class="card narrow">';
+        if (!$rows) {
+            $h .= '<p class="fine">Nobody has downloaded a sync kit from the site yet.</p>';
+        } else {
+            $h .= '<ul class="keys">';
+            foreach ($rows as $k) {
+                $h .= '<li><div><b>' . e($k['character_name'] ?: $k['username']) . '</b> <small>…' . e($k['key_hint']) . '</small>'
+                    . '<span class="meta">created ' . when((int)$k['created_at'])
+                    . ($k['last_used_at'] ? ' · last sync ' . when((int)$k['last_used_at']) : ' · never used') . '</span></div>'
+                    . '<form method="post">' . csrf_field() . '<input type="hidden" name="action" value="revoke">'
+                    . '<input type="hidden" name="key_id" value="' . (int)$k['id'] . '">'
+                    . '<button class="btn danger small">Turn off</button></form></li>';
+            }
+            $h .= '</ul>';
+        }
+        if (cfg('upload_keys')) {
+            $h .= '<p class="fine">Keys written in config.php also still work. Remove them there to turn them off.</p>';
+        }
+        $h .= '</div>';
+    }
+    return $h;
 }
 
 function tab_names(): array

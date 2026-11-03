@@ -158,3 +158,11 @@ label { color: var(--muted); font-size: .85rem; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0 0 12px; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; }
+
+/* Sync keys */
+h2.section { margin: 22px 0 8px; }
+.row-actions { margin: 10px 0 4px; }
+code { background: var(--bg-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-size: .85em; }
+.keys { list-style: none; padding: 0; margin: 0; }
+.keys li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.keys li:first-child { border-top: 0; }

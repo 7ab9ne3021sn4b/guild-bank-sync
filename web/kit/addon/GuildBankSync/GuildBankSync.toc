@@ -1,0 +1,9 @@
+## Interface: 16001
+## Title: Guild Bank Sync
+## Notes: Saves guild bank contents and logs so the uploader can sync them to your guild's website, and shows approved requests to hand out.
+## Author: Skippy
+## Version: 0.2.0
+## SavedVariables: GuildBankSyncDB
+
+Inbox.lua
+GuildBankSync.lua

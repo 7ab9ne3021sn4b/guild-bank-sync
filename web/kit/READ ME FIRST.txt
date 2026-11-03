@@ -1,0 +1,42 @@
+{GUILD} Guild Bank - sync kit for {OWNER}
+===============================================
+
+This kit contains YOUR personal upload key. Don't share it.
+Before extracting: right-click the zip > Properties > tick "Unblock" (if shown) > OK.
+
+1. THE ADDON
+   Copy the "GuildBankSync" folder from "1 - Copy into AddOns" into:
+     ...\World of Warcraft\_forever_\Interface\AddOns\
+   (Create the Interface and AddOns folders if they don't exist yet. Replace the old
+   GuildBankSync folder if you had one.)
+   In game, make sure "Guild Bank Sync" is ticked in the AddOns list on the character screen.
+   If it says "out of date", tick "Load out of date AddOns".
+
+2. THE UPLOADER
+   Move the "2 - Uploader" folder somewhere it can stay (e.g. Documents). Don't run it from inside the zip.
+   If you had an older uploader: right-click its chest icon > Quit, and delete the old folder.
+   Double-click "start-uploader.vbs". Nothing opens: it runs in the background and a small
+   gold chest icon appears near the clock (click the ^ arrow if you don't see it).
+   The first time, it looks for your WoW folder; if it can't find it, it asks you to pick it.
+
+   Right-click the chest icon for:
+     - Open the guild bank website
+     - Check for new snapshots now
+     - Show log
+     - Start with Windows   (tick this once, and you never have to start it by hand again)
+     - Quit uploader
+
+   Something not working? Quit it from the chest icon, then double-click
+   "start-uploader-console.bat" to run it in a visible window and see what it says.
+
+3. SYNCING
+   In game: open the guild vault and wait a few seconds. When you close it, a popup asks to
+   reload; click "Reload now". A "Guild bank synced" notification pops up on your PC.
+   Check {SITE}
+
+   While the vault is open, a small list shows approved requests that still need handing out.
+   The uploader keeps that list up to date; it refreshes in game on each reload.
+
+Your character only uploads the tabs it can see, so sync with a character that can see all tabs.
+Lost the kit or think someone else has it? Download a new one from your profile on the website;
+the old key stops working straight away.

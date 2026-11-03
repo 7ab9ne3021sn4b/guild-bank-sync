@@ -19,7 +19,10 @@ and get notified in Discord, and a request closes itself when the member takes t
 
 **Why the uploader?** The game can't talk to the internet, so the addon saves a snapshot to disk and a
 small uploader on the officer's PC sends it to the website. The site updates whenever someone with both
-opens the guild vault and then types `/reload` (or logs out).
+opens the guild vault and reloads; the addon offers a one-click "Reload now" after closing the vault.
+
+**Two-way:** the uploader also fetches approved requests from the site and writes them into the addon,
+so officers see a "To hand out" list next to the guild vault in game.
 
 **Privacy and safety**
 - The addon only *reads* the guild bank. It never moves items or gold.
@@ -32,13 +35,16 @@ opens the guild vault and then types `/reload` (or logs out).
 
 | Folder | What it is |
 |---|---|
-| `addon/GuildBankSync/` | The in-game addon (Lua). |
-| `uploader/` | Windows uploader (PowerShell, nothing to install). Runs in the system tray. |
-| `web/` | The website (PHP 8.1+, MySQL/MariaDB). |
+| `web/` | The website (PHP 8.1+, MySQL/MariaDB, curl and zip extensions). |
+| `web/kit/addon/GuildBankSync/` | The in-game addon (Lua). |
+| `web/kit/uploader/` | Windows uploader (PowerShell, nothing to install). Runs in the system tray. |
+
+The addon and uploader live inside `web/kit/` because the website builds each officer's personal
+sync kit from them.
 
 ## Setting up the website
 
-1. **Hosting:** any PHP 8.1+ hosting with MySQL and the curl extension. Create a database and import
+1. **Hosting:** any PHP 8.1+ hosting with MySQL and the curl and zip extensions. Create a database and import
    `web/schema.sql` (phpMyAdmin → Import).
 2. **Upload** the contents of `web/` to the site's folder, including the `.htaccess` files.
 3. **Discord application:** <https://discord.com/developers/applications> → New Application → OAuth2.
@@ -46,26 +52,31 @@ opens the guild vault and then types `/reload` (or logs out).
    No bot is needed.
 4. **Configure:** copy `web/config.sample.php` to `web/config.php` and fill in the guild name, site
    address, database, Discord IDs, upload keys and ranks (Discord role ID → visible tabs and permissions).
-   `config.php` is in `.gitignore` and must never be committed.
+   `config.php` is in `.gitignore` and must never be committed. Updating an existing install? Upload
+   the new files over the old ones; new database tables are created automatically.
 5. Open the site and log in with Discord.
 
 Errors are written to `web/logs/php-errors.log` (blocked from browsers); visitors only see a short code.
 
 ## Setting up a syncer (officer PC)
 
-1. Copy `addon/GuildBankSync` into `World of Warcraft\_forever_\Interface\AddOns\`.
-2. Open `uploader/gbs-uploader.ps1` in Notepad and set the three lines at the top: `$GuildName`,
-   `$SiteUrl` (your bank website) and `$ApiKey` (one of the `upload_keys` from `config.php`).
-   Tip: fill these in once per officer and hand out the folder as a ready-made kit.
-3. Double-click `uploader/start-uploader.vbs`. A gold chest icon appears near the clock. Right-click it to
+1. Log in on the website, open **Profile**, and click **Download my sync kit**. Ranks with `can_approve`
+   (or `can_sync`) get this option. The kit has the addon and the uploader with the guild name, website
+   address and a personal key already filled in.
+2. Copy the `GuildBankSync` folder into `World of Warcraft\_forever_\Interface\AddOns\`.
+3. Double-click `start-uploader.vbs`. A gold chest icon appears near the clock. Right-click it to
    open the website, check for snapshots, show the log, or turn on **Start with Windows**.
    `start-uploader-console.bat` runs it in a visible window for troubleshooting.
-4. In game: open the guild vault, wait for *"GuildBankSync: Snapshot saved"*, then `/reload`.
+4. In game: open the guild vault, wait a few seconds, close it, and click **Reload now**.
 
 The addon only sees the tabs **your character** can see, so sync with a character that can see all tabs.
-In-game commands: `/gbs` (status), `/gbs scan`, `/gbs clear`.
+In-game commands: `/gbs` (status), `/gbs list` (hand-out list), `/gbs scan`, `/gbs popup`,
+`/gbs handouts`, `/gbs clear`.
 
-Give every syncer their own key, so one can be revoked by deleting its line from `upload_keys`.
+**Keys.** Each kit has its own key, stored on the site only as a hash. Downloading a new kit replaces
+the old key; officers can turn off any key on their Profile page, and a key stops working when its owner
+loses their syncing rank. Fixed keys in `config.php` (`upload_keys`) also work, e.g. for a shared PC.
+To build a kit by hand, set `$GuildName`, `$SiteUrl` and `$ApiKey` at the top of `gbs-uploader.ps1`.
 
 ## How it works
 

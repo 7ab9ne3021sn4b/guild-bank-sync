@@ -177,7 +177,7 @@ function Send-Snapshot([string]$json) {
         Headers     = @{ Authorization = "Bearer $ApiKey" }
         ContentType = 'application/json; charset=utf-8'
         Body        = [Text.Encoding]::UTF8.GetBytes($json)
-        UserAgent   = 'GuildBankSync-Uploader/0.3'
+        UserAgent   = 'GuildBankSync-Uploader/0.4'
         TimeoutSec  = 30
     }
     try {
@@ -202,6 +202,87 @@ $script:pauseUntil = [datetime]::MinValue
 $script:busy = $false
 $script:root = $null
 
+$script:inboxDue = [datetime]::MinValue
+$script:inboxCount = -1
+$script:inboxWarned = $false
+
+# ---------------------------------------------------------------------------
+# Hand-out list: approved requests, written into the addon folder as Inbox.lua.
+# The game reads it on the next login or /reload.
+# ---------------------------------------------------------------------------
+function Find-AddonDirs([string]$root) {
+    $patterns = @(
+        (Join-Path $root 'Interface\AddOns\GuildBankSync'),
+        (Join-Path $root '*\Interface\AddOns\GuildBankSync')
+    )
+    $found = @()
+    foreach ($p in $patterns) { $found += @(Get-Item -Path $p -ErrorAction SilentlyContinue | Where-Object { $_.PSIsContainer }) }
+    return $found | Sort-Object FullName -Unique
+}
+
+function ConvertTo-LuaString($value) {
+    if ($null -eq $value) { return 'nil' }
+    $s = [string]$value
+    $s = $s.Replace('\', '\\').Replace('"', '\"').Replace("`r", '').Replace("`n", '\n')
+    $s = [regex]::Replace($s, '[\x00-\x1f]', '')
+    return '"' + $s + '"'
+}
+
+function ConvertTo-LuaNumber($value) {
+    if ($null -eq $value -or [string]$value -eq '') { return 'nil' }
+    return ([long]$value).ToString([Globalization.CultureInfo]::InvariantCulture)
+}
+
+function Update-Inbox {
+    $dirs = @(Find-AddonDirs $script:root)
+    if (-not $dirs.Count) { return }
+    try {
+        $resp = Invoke-RestMethod -Uri "$($SiteUrl.TrimEnd('/'))/index.php?route=api/handouts" -Method Get `
+            -Headers @{ Authorization = "Bearer $ApiKey" } -UserAgent 'GuildBankSync-Uploader/0.4' -TimeoutSec 20 -UseBasicParsing
+    } catch {
+        if (-not $script:inboxWarned) {
+            Log "Could not fetch the hand-out list: $($_.Exception.Message)" 'Yellow'
+            $script:inboxWarned = $true
+        }
+        return
+    }
+    $script:inboxWarned = $false
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add('-- Written by the Guild Bank Sync uploader. Do not edit; it is replaced automatically.')
+    $lines.Add('GuildBankSyncInbox = {')
+    $lines.Add("  updated = $(ConvertTo-LuaNumber $resp.time),")
+    $lines.Add('  requests = {')
+    $count = 0
+    foreach ($r in @($resp.requests)) {
+        if ($null -eq $r) { continue }
+        $count++
+        $lines.Add(('    {{ id = {0}, character = {1}, itemId = {2}, item = {3}, quality = {4}, quantity = {5}, approvedBy = {6} }},' -f `
+            (ConvertTo-LuaNumber $r.id), (ConvertTo-LuaString $r.character), (ConvertTo-LuaNumber $r.item_id),
+            (ConvertTo-LuaString $r.item_name), (ConvertTo-LuaNumber $r.quality), (ConvertTo-LuaNumber $r.quantity),
+            (ConvertTo-LuaString $r.approved_by)))
+    }
+    $lines.Add('  },')
+    $lines.Add('}')
+    $text = ($lines -join "`r`n") + "`r`n"
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    foreach ($dir in $dirs) {
+        $path = Join-Path $dir.FullName 'Inbox.lua'
+        $old = if (Test-Path -LiteralPath $path) { [IO.File]::ReadAllText($path, $utf8) } else { '' }
+        # Ignore the timestamp line when comparing, so the file only changes when the list does.
+        $strip = { param($t) [regex]::Replace($t, '(?m)^\s*updated = .*$', '') }
+        if ((& $strip $old) -ne (& $strip $text)) {
+            [IO.File]::WriteAllText($path, $text, $utf8)
+        }
+    }
+    if ($count -ne $script:inboxCount) {
+        if ($count -gt $script:inboxCount -and $script:inboxCount -ge 0) {
+            Notify 'Requests to hand out' "$count approved request(s) waiting. They show in game after your next /reload." 'Info'
+        }
+        Log "Hand-out list: $count approved request(s)."
+        $script:inboxCount = $count
+    }
+}
+
 # One pass: look at the saved file(s) and upload anything new.
 function Invoke-Sync {
     if ($script:busy -or (Get-Date) -lt $script:pauseUntil) { return }
@@ -209,7 +290,7 @@ function Invoke-Sync {
     try {
         $files = @(Find-SavedFiles $script:root)
         if (-not $files.Count -and -not $script:announced) {
-            Log 'Waiting for the addon. In game: open the guild vault, wait for "Snapshot saved", then type /reload.' 'Yellow'
+            Log 'Waiting for the addon. In game: open the guild vault, wait a few seconds, close it and click "Reload now".' 'Yellow'
             Set-Status 'waiting for the addon'
             $script:announced = $true
         }
@@ -236,9 +317,10 @@ function Invoke-Sync {
                     Set-Status ('last sync ' + (Get-Date).ToString('HH:mm'))
                     Notify 'Guild bank synced' $msg 'Info' -Force
                     $script:sent.Add($hash); $changed = $true
+                    $script:inboxDue = [datetime]::MinValue
                 } elseif ($r.Status -eq 401) {
-                    Log 'The site rejected the upload key. Check that $ApiKey matches upload_keys in config.php.' 'Red'
-                    Notify 'Upload key rejected' 'The website did not accept this uploader''s key. Ask your guild bank admin for a new key.' 'Error'
+                    Log 'The site rejected the upload key. It was turned off, or your rank can no longer sync. Download a new sync kit from your profile on the website.' 'Red'
+                    Notify 'Upload key rejected' 'The website no longer accepts this kit. Download a new sync kit from your profile on the website.' 'Error'
                     Set-Status 'upload key rejected'
                     $script:pauseUntil = (Get-Date).AddMinutes(1)
                     $allOk = $false; break
@@ -263,6 +345,10 @@ function Invoke-Sync {
                 Set-Content -LiteralPath $StateFile -Value $keep
             }
             if ($allOk) { $script:mtimes[$file.FullName] = $stamp }
+        }
+        if ((Get-Date) -ge $script:inboxDue) {
+            $script:inboxDue = (Get-Date).AddMinutes(5)
+            Update-Inbox
         }
     } catch {
         Log "Unexpected error: $($_.Exception.Message)" 'Red'
@@ -329,6 +415,7 @@ function Start-Tray {
     $syncNow.Add_Click({
         $script:mtimes = @{}
         $script:pauseUntil = [datetime]::MinValue
+        $script:inboxDue = [datetime]::MinValue
         Invoke-Sync
     })
 

@@ -228,22 +228,8 @@ function handle_upload_api(): void
         echo json_encode(['error' => 'POST only']);
         return;
     }
-    $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
-    if ($auth === '' && function_exists('getallheaders')) {
-        foreach (getallheaders() as $k => $v) {
-            if (strtolower($k) === 'authorization') {
-                $auth = $v;
-            }
-        }
-    }
-    $key = preg_match('/^Bearer\s+(.+)$/i', (string)$auth, $m) ? trim($m[1]) : '';
-    $valid = false;
-    foreach ((array)cfg('upload_keys', []) as $candidate) {
-        if ($key !== '' && is_string($candidate) && strlen($candidate) >= 16 && hash_equals($candidate, $key)) {
-            $valid = true;
-        }
-    }
-    if (!$valid) {
+    $uploader = authenticate_upload_key(request_bearer_key());
+    if ($uploader === null) {
         http_response_code(401);
         echo json_encode(['error' => 'Invalid upload key']);
         return;

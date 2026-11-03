@@ -31,7 +31,8 @@ return [
     // Leave empty to turn notifications off.
     'webhook_url' => '',
 
-    // Keys the uploader uses. Generate long random strings, one per person who runs the uploader.
+    // Officers normally download their own sync kit (with a personal key) from their profile page.
+    // You can also add fixed keys here, e.g. for a shared PC. Use long random strings.
     'upload_keys' => [
         // 'officer-1' => 'replace-with-a-long-random-string',
     ],
@@ -42,6 +43,7 @@ return [
     //  money_log:   may see gold deposits/withdrawals
     //  can_request: may request withdrawals
     //  can_approve: may approve/deny requests and see everyone's requests
+    //  can_sync:    may download a sync kit (optional; defaults to the same as can_approve)
     'ranks' => [
         ['name' => 'Guild Master', 'role_id' => '000000000000000001', 'tabs' => 'all',
          'money_log' => true, 'can_request' => true, 'can_approve' => true],

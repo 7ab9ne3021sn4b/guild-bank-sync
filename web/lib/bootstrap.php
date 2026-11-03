@@ -17,7 +17,7 @@ set_exception_handler(function (Throwable $e): void {
     if (!headers_sent()) {
         http_response_code(500);
     }
-    if (($_GET['route'] ?? '') === 'api/upload') {
+    if (str_starts_with((string)($_GET['route'] ?? ''), 'api/')) {
         if (!headers_sent()) {
             header('Content-Type: application/json');
         }
@@ -54,6 +54,7 @@ date_default_timezone_set(cfg('timezone', 'UTC'));
 require_once __DIR__ . '/discord.php';
 require_once __DIR__ . '/ingest.php';
 require_once __DIR__ . '/requests.php';
+require_once __DIR__ . '/synckeys.php';
 require_once __DIR__ . '/views.php';
 
 function cfg(string $key, $default = null)

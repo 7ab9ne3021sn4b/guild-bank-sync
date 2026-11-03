@@ -3,9 +3,9 @@ web/config.php
 web/logs/*.log
 
 # Per-PC uploader files
-uploader/uploaded.txt
-uploader/wow-folder.txt
-uploader/uploader-log.txt
+web/kit/uploader/uploaded.txt
+web/kit/uploader/wow-folder.txt
+web/kit/uploader/uploader-log.txt
 
 # Built kits contain upload keys
 *.zip
