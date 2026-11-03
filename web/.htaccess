@@ -1,0 +1,13 @@
+# Keep secrets and code out of reach of browsers.
+<FilesMatch "^(config\.php|config\.sample\.php|schema\.sql)$">
+  Require all denied
+</FilesMatch>
+
+Options -Indexes
+
+# Some PHP setups drop the Authorization header the uploader sends; pass it through.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
